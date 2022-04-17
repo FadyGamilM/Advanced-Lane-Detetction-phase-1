@@ -1,4 +1,4 @@
 # Advanced-Lane-Detetction-phase-1
 
-## the high-level pipeline of the project
-![block diagram](blob:https://engasuedu-my.sharepoint.com/dde65661-90c9-445e-88c8-05066d9b190c)
+## we beleive that diagrams worth thousand words, so this is the high level diagram which represents the pipeline of the project starting from reading a frame to detecting the lane curves and lines.
+![block diagram](F:\__111 COMPUTER SCIENCE\4th CSE 2022\materials\image\Advanced-Lane-Detetction-phase-1\Advanced Lane Detection Project-Page-2.drawio.png)
