@@ -7,7 +7,7 @@ from docopt import docopt
 from moviepy.editor import VideoFileClip
 import glob
 
-# CALIBRATE THE CAMERA AND REMOVE DISTORTION
+#! [1] CALIBRATE THE CAMERA AND REMOVE DISTORTION
 objpoints = []
 imgpoints = []
 
@@ -54,7 +54,7 @@ def undistort(test_frame):
   return cv2.undistort(test_frame, camera_Matrix, distortion_Coeff, None, camera_Matrix)
 
 
-# (2) Finding Top (Eye-bird) view from Front-view
+#! [2] FINDING TOP 'BIRD-EYE' VIEW FROM GIVEN FRONT VIEW
 src = np.float32([(550, 460),     # top-left
                   (150, 720),     # bottom-left
                   (1200, 720),    # bottom-right
@@ -103,3 +103,48 @@ def get_front_view(img, img_size=(1280, 720), flags=cv2.INTER_LINEAR):
       Image (np.array): Front view image
   """
   return cv2.warpPerspective(img, inverse_transform_matrix, img_size, flags=flags)
+
+#! [3] THRESHOLDING TO DETECT THE LANES FROM THE IMAGE
+def threshold_rel(img, lo, hi):
+  vmin = np.min(img)
+  # print("vmin = ", vmin)
+  vmax = np.max(img)
+  # print("vmax = ", vmax)
+  vlo = vmin + (vmax - vmin) * lo
+  # print("vlo = ", vlo)
+  vhi = vmin + (vmax - vmin) * hi
+  # print("vhi = ", vhi)
+  # print(np.uint8((img >= vlo) & (img <= vhi)) * 255)
+  return np.uint8((img >= vlo) & (img <= vhi)) * 255
+
+def threshold_abs(img, lo, hi):
+  # print(np.uint8((img >= lo) & (img <= hi)) * 255)
+  return np.uint8((img >= lo) & (img <= hi)) * 255
+
+def thresholding(img):
+  """ Take an image and extract all relavant pixels.
+
+  Parameters:
+      img (np.array): Input image
+
+  Returns:
+      binary (np.array): A binary image represent all positions of relavant pixels.
+  """
+  hls = cv2.cvtColor(img, cv2.COLOR_RGB2HLS)
+  hsv = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
+  h_channel = hls[:,:,0]
+  l_channel = hls[:,:,1]
+  s_channel = hls[:,:,2]
+  v_channel = hsv[:,:,2]
+  # we choosed the L-channel to detect the right lane because the right lane is almost white
+  # so we put the min threshold to 80% and max threshold to be 100%
+  right_lane = threshold_rel(l_channel, 0.8, 1.0)
+  right_lane[:,:750] = 0
+  # print("right_lane", right_lane)
+  # choose the range from 30*(2/3) = 20 and 60*(2/3) = 40 but we will take the range from 20 to 30 only because the dark yellow is not in our case
+  left_lane = threshold_abs(h_channel, 20, 30)
+  # the value of the color is from 70 % to 100 % in intensity
+  left_lane &= threshold_rel(v_channel, 0.7, 1.0)
+  left_lane[:,550:] = 0
+  img2 = left_lane | right_lane
+  return img2
