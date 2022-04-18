@@ -6,7 +6,6 @@ import cv2
 from docopt import docopt
 from moviepy.editor import VideoFileClip
 import glob
-from google.colab.patches import cv2_imshow
 
 # CALIBRATE THE CAMERA AND REMOVE DISTORTION
 objpoints = []
@@ -53,3 +52,54 @@ def undistort(test_frame):
     this method remove the distortion from the image
   """
   return cv2.undistort(test_frame, camera_Matrix, distortion_Coeff, None, camera_Matrix)
+
+
+# (2) Finding Top (Eye-bird) view from Front-view
+src = np.float32([(550, 460),     # top-left
+                  (150, 720),     # bottom-left
+                  (1200, 720),    # bottom-right
+                  (770, 460)])    # top-right
+dst = np.float32([(100, 0),
+                  (100, 720),
+                  (1100, 720),
+                  (1100, 0)])
+
+def get_transform_matrix(src, dst):
+  """ get the transform matrix from src and dst dimensions """
+  M = cv2.getPerspectiveTransform(src, dst)
+  return M
+
+def get_inverse_transform_matrix(src, dst):
+  """ get the inverse transform matrix from src and dst dimensions """
+  M_inv = cv2.getPerspectiveTransform(dst, src)
+  return M_inv
+
+# get the transform and inverse transform matrix
+transform_matrix = get_transform_matrix(src, dst)
+inverse_transform_matrix = get_inverse_transform_matrix(src, dst)
+
+def get_eye_bird_view(img, img_size=(1280, 720), flags=cv2.INTER_LINEAR):
+  """ 
+  Take a front view image and transform to top view
+  Parameters:
+      img (np.array): A front view image
+      img_size (tuple): Size of the image (width, height)
+      flags : flag to use in cv2.warpPerspective()
+
+  Returns:
+      Image (np.array): Top view image
+  """
+  return cv2.warpPerspective(img, transform_matrix, img_size, flags=flags)
+  
+def get_front_view(img, img_size=(1280, 720), flags=cv2.INTER_LINEAR):
+  """ Take a top view image and transform it to front view
+
+  Parameters:
+      img (np.array): A top view image
+      img_size (tuple): Size of the image (width, height)
+      flags (int): flag to use in cv2.warpPerspective()
+
+  Returns:
+      Image (np.array): Front view image
+  """
+  return cv2.warpPerspective(img, inverse_transform_matrix, img_size, flags=flags)
