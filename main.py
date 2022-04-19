@@ -148,3 +148,69 @@ def thresholding(img):
   left_lane[:,550:] = 0
   img2 = left_lane | right_lane
   return img2
+
+def detect_lane_lines(img):
+  """
+  this method wrap the whole lane_lines_detection process by calling these 2 methods
+  """
+  # extract more features from the image .. 
+  extract_features(img)
+  # try to fit and draw the lane lines using polyfit technique
+  return fit_poly(img)
+
+def get_histogram(img):
+  """ function that returns a histogram for a passed image """ 
+  # take the bottom half of the image by taking all rows starting 
+  # from the middle of the image to the bottom of the image
+  # and take all the width
+  bottom_half = img[img.shape[0]//2:,:]
+  # return the sum of all the rows starting from the bottom half of the image
+  return np.sum(bottom_half, axis=0)
+
+# REQUIRED VARIABLES
+nwindows = 9
+margin = 100
+minpix = 50
+binary = None
+left_fit = None
+right_fit = None
+dir = []
+nonzero = None
+nonzerox = None
+nonzeroy = None
+clear_visibility = True
+window_height = 0
+
+def extract_features(img):
+  global nonzero
+  global nonzerox
+  global nonzeroy
+  global window_height
+  window_height = np.int(img.shape[0]//nwindows)
+  # Identify the x and y positions of all nonzero pixel in the image
+  nonzero = img.nonzero()
+  # returns the nonzero from width (cols)
+  nonzerox = np.array(nonzero[1])
+  # returns the nonzero from height (rows)
+  nonzeroy = np.array(nonzero[0])
+
+def pixels_in_window(center, margin, height):
+  global nonzerox
+  global nonzeroy
+  """ Return all pixel that in a specific window
+
+  Parameters:
+      center (tuple): coordinate of the center of the window
+      margin (int): half width of the window
+      height (int): height of the window
+
+  Returns:
+      pixelx (np.array): x coordinates of pixels that lie inside the window
+      pixely (np.array): y coordinates of pixels that lie inside the window
+  """
+  topleft = (center[0]-margin, center[1]-height//2)
+  bottomright = (center[0]+margin, center[1]+height//2)
+
+  condx = (topleft[0] <= nonzerox) & (nonzerox <= bottomright[0])
+  condy = (topleft[1] <= nonzeroy) & (nonzeroy <= bottomright[1])
+  return nonzerox[condx&condy], nonzeroy[condx&condy]
