@@ -24,3 +24,12 @@
 > * Compute the transformation matrix by passing the source and destination points into **`cv2.getPerspectiveTransform`**. These points are determined empirically.
 > * Then the undistorted image is warped by passing it into **`cv2.warpPerspective`** along with the transformation matrix.
 > * We defined 2 functions: **`get_eye_bird_view()`** which gets the top-view from front-view, and the **`get_front_view()`** which gets back the front-view from top-view 
+
+## [3] Image Thresholding
+- the main purpose of this stage is to generate a binary image that contains the pixels that are likely to be a part of the lane lines.
+- We have 2 colors for lanes, the yellow and white colors.
+- Since that the right lane is almost the white lane, we will focus on the L-Channel from HLS color space to detect the white lanes because we are interested in the lightining property, we will put the minimum threshold to be 80% and maximum threshold to be 100%.
+- We will use the H-Channel from HLS color space to detect the yellow lanes, the minimun threshold is 20 and maximum threshold is 30.
+> how we got these numbers ? .. the yellow color is focused from the range of 20 degree to 40 degree, we will take the range from 30 deg to less than 60 deg only which is can be calculated using this equation: `angle*(2/3) = threshold`, so 30*(2/3) = 20 and 60*(2/3) = 4  but we will take to the range 30 as our maximum.
+- Then we will combine the result from the H-Channel with V-Channel from HSV which repesents the intensity of the yellow color, we will set the minimum threshold = 70 and maximum threshold = 100.
+- and finlly we have the left lane and right lane detected successfully.  
