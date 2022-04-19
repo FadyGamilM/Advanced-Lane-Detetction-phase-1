@@ -214,3 +214,197 @@ def pixels_in_window(center, margin, height):
   condx = (topleft[0] <= nonzerox) & (nonzerox <= bottomright[0])
   condy = (topleft[1] <= nonzeroy) & (nonzeroy <= bottomright[1])
   return nonzerox[condx&condy], nonzeroy[condx&condy]
+
+def find_lane_pixels(img):
+  """
+  this function find the x,y coordinates of all pixels in left lane
+  and also find the x,y coordinates of all pixels in right lane
+  returns:
+    > leftx
+    > rightx
+    > lefty
+    >righty
+  """
+  global window_height
+  global nwindows
+  global margin
+  global minpix
+
+  assert(len(img.shape) == 2)
+  # Create an output image to draw on and visualize the result
+  out_img = np.dstack((img, img, img))
+
+  # get the histogram of the image
+  histogram = get_histogram(img)
+  # get the mid point of this histogram
+  midpoint = histogram.shape[0]//2
+  # divide the histogram to 2 parts 
+  # -> getting the max index of max point from starting point of the histogram to the midpoint
+  leftx_base = np.argmax(histogram[:midpoint])
+  # -> the max index of max point from midpoint to the end of histogram
+  rightx_base = np.argmax(histogram[midpoint:]) + midpoint
+
+  # lets now store the left_base and right_base into new variables to update them without any errors
+  leftx_current = leftx_base
+  rightx_current = rightx_base
+
+  # initially we are above the height of the image by 0.5 window height  = 370 "350 + 20" window_height = 40
+  y_current = img.shape[0] + window_height//2
+
+  # Create empty lists to reveice left and right lane pixel
+  leftx, lefty, rightx, righty = [], [], [], []
+
+  # Step through the windows one by one
+  for _ in range(nwindows):
+    # center of the current window (from top to bottom)
+    y_current -= window_height
+    # we are operating the left and right window in parallel,
+    # we are starting from the center of the first window of left and right lanes starting from top to bottm
+    center_left = (leftx_current, y_current)
+    center_right = (rightx_current, y_current)
+
+    good_left_x, good_left_y = pixels_in_window(center_left, margin, window_height)
+    good_right_x, good_right_y = pixels_in_window(center_right, margin, window_height)
+
+    # Append these indices to the lists
+    leftx.extend(good_left_x)
+    lefty.extend(good_left_y)
+    rightx.extend(good_right_x)
+    righty.extend(good_right_y)
+
+    if len(good_left_x) > minpix:
+        leftx_current = np.int32(np.mean(good_left_x))
+    if len(good_right_x) > minpix:
+        rightx_current = np.int32(np.mean(good_right_x))
+
+  return leftx, lefty, rightx, righty, out_img
+
+def fit_poly(img):
+  """Find the lane line from an image and draw it.
+
+  Parameters:
+      img (np.array): a binary warped image
+
+  Returns:
+      out_img (np.array): a RGB image that have lane line drawn on that.
+  """
+  global left_fit
+  global right_fit
+
+  # we have all pixels in each window in left and right lanes
+  leftx, lefty, rightx, righty, out_img = find_lane_pixels(img)
+
+  if len(lefty) > 1500:
+    left_fit = np.polyfit(lefty, leftx, 2) # 2nd degree polynomial 
+    # print(left_fit)
+  if len(righty) > 1500:
+    right_fit = np.polyfit(righty, rightx, 2)
+
+  # Generate x and y values for plotting
+  maxy = img.shape[0] - 1
+  miny = img.shape[0] // 3
+  if len(lefty):
+    maxy = max(maxy, np.max(lefty))
+    miny = min(miny, np.min(lefty))
+
+  if len(righty):
+    maxy = max(maxy, np.max(righty))
+    miny = min(miny, np.min(righty))
+
+  ploty = np.linspace(miny, maxy, img.shape[0])
+
+  left_fitx = left_fit[0]*ploty**2 + left_fit[1]*ploty + left_fit[2]
+  right_fitx = right_fit[0]*ploty**2 + right_fit[1]*ploty + right_fit[2]
+
+  # Visualization
+  for i, y in enumerate(ploty):
+    l = int(left_fitx[i])
+    r = int(right_fitx[i])
+    y = int(y)
+    cv2.line(out_img, (l, y), (r, y), (0, 255, 0))
+
+  lR, rR, pos = measure_curvature()
+  return out_img
+
+def measure_curvature():
+  global left_fit
+  global right_fit
+
+  ym = 30/720
+  xm = 3.7/700
+
+  left_fit = left_fit.copy()
+  right_fit = right_fit.copy()
+
+  y_eval = 700 * ym
+  # Compute R_curve (radius of curvature)
+  left_curveR =  ((1 + (2*left_fit[0] *y_eval + left_fit[1])**2)**1.5)  / np.absolute(2*left_fit[0])
+  right_curveR = ((1 + (2*right_fit[0]*y_eval + right_fit[1])**2)**1.5) / np.absolute(2*right_fit[0])
+
+  xl = np.dot(left_fit, [700**2, 700, 1])
+  xr = np.dot(right_fit, [700**2, 700, 1])
+  pos = (1280//2 - (xl+xr)//2)*xm
+  return left_curveR, right_curveR, pos 
+
+def plot(out_img):
+  global dir
+  global left_fit
+  global right_fit
+  global left_curve_img
+  global right_curve_img
+  global keep_straight_img
+  global left_curve_img
+  global right_curve_img
+  global keep_straight_img
+
+  np.set_printoptions(precision=6, suppress=True)
+  
+  lR, rR, pos = measure_curvature()
+
+  value = None
+  if abs(left_fit[0]) > abs(right_fit[0]):
+    value = left_fit[0]
+  else:
+    value = right_fit[0]
+
+  if abs(value) <= 0.00015:
+    dir.append('F')
+  elif value < 0:
+    dir.append('L')
+  else:
+    dir.append('R')
+  
+  if len(dir) > 10:
+    dir.pop(0)
+
+  W = 400
+  H = 300
+  widget = np.copy(out_img[:H, :W])
+  widget //= 2
+  widget[0,:] = [0, 0, 255]
+  widget[-1,:] = [0, 0, 255]
+  widget[:,0] = [0, 0, 255]
+  widget[:,-1] = [0, 0, 255]
+  out_img[:H, :W] = widget
+
+  direction = max(set(dir), key = dir.count)
+  curvature_msg = "Curvature = {:.0f} m".format(min(lR, rR))
+  if direction == 'F':
+    straight_msg= "Curvature = 0 m"
+    cv2.putText(out_img, straight_msg, org=(10, 140), fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=(255, 255, 255), thickness=2)
+
+  if direction in 'LR':
+    cv2.putText(out_img, curvature_msg, org=(10, 140), fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=(255, 255, 255), thickness=2)
+
+  cv2.putText(
+      out_img,
+      "Vehicle is {:.2f} m away from center".format(pos),
+      org=(10, 180),
+      fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+      fontScale=0.66,
+      color=(255, 255, 255),
+      thickness=2)
+
+  return out_img
+
+  
