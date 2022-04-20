@@ -58,4 +58,4 @@ From these starting points, we use a sliding window, placed around the line cent
 - We define a function that will fit and draw the lines using the mentioned fit-poly technique with the mentioned 2nd degree polynomial, this function is named ad `fit_poly(img)`
 - the `fit_poly(img)` will do that by calling another method defined which is called `find_lane_pixels(img)`, and this function recieves an image and returns all the non-zero pixels from each window by looping through all windows after calculating the center of each window and the x, y coordinates.
 - this is the representation of a single window with all variables we defined in our code:
-![window]()
+![window](window.png)
