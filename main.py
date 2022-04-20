@@ -4,8 +4,10 @@ import matplotlib.image as mpimg
 import matplotlib.pyplot as plt
 import cv2
 from docopt import docopt
+from IPython.display import HTML, Video
 from moviepy.editor import VideoFileClip
 import glob
+import sys
 
 #! [1] CALIBRATE THE CAMERA AND REMOVE DISTORTION
 objpoints = []
@@ -24,7 +26,7 @@ def calibrate_camera():
   objp[:,:2] = np.mgrid[0:nx, 0:ny].T.reshape(-1, 2)
 
   # Make a list of calibration images
-  frames = glob.glob('/content/drive/MyDrive/camera_cal/calibration*.jpg')
+  frames = glob.glob('./camera_cal/calibration*.jpg')
 
   # loop through the frames paths
   for frame in frames:
@@ -407,4 +409,75 @@ def plot(out_img):
 
   return out_img
 
+def pipeline(input_frame):
+  out_img = np.copy(input_frame)
+  input_frame = undistort(input_frame)
+  input_frame = get_eye_bird_view(input_frame)
+  input_frame = thresholding(input_frame)
+  input_frame = detect_lane_lines(input_frame)
+  input_frame = get_front_view(input_frame)
+  out_img = cv2.addWeighted(out_img, 1, input_frame, 0.6, 0)
+  out_img = plot(out_img)
+  return out_img
+
+def pipeline_debug(input_frame):
+  height, width = 1080, 1920
+  FinalScreen = np.zeros((height, width, 3), dtype=np.uint8)
+  out_img = np.copy(input_frame)
   
+  undistoted_frame = undistort(input_frame)
+  cv2.putText(undistoted_frame, 'Undistorted Frame',(50,50),cv2.FONT_HERSHEY_SIMPLEX,1,(0,255,0),2)
+  FinalScreen[0:360,1280:1920] = cv2.resize(undistoted_frame, (640,360), interpolation=cv2.INTER_AREA)
+
+  bird_view_frame = get_eye_bird_view(undistoted_frame)
+  cv2.putText(bird_view_frame, 'Bird Eye View Frame',(50,50),cv2.FONT_HERSHEY_SIMPLEX,1,(0,255,0),2)
+  FinalScreen[360:720,1280:1920] = cv2.resize(bird_view_frame, (640,360), interpolation=cv2.INTER_AREA)
+
+  threshold_frame = thresholding(bird_view_frame)
+  thresholded_frame_cpy = np.copy(threshold_frame)
+  thresholded_frame_cpy = np.dstack((thresholded_frame_cpy, thresholded_frame_cpy, thresholded_frame_cpy))
+  cv2.putText(thresholded_frame_cpy, 'Thresholded Frame',(50,50),cv2.FONT_HERSHEY_SIMPLEX,1,(0,255,0),2)
+  FinalScreen[720:1080,1280:1920] = cv2.resize(thresholded_frame_cpy, (640,360), interpolation=cv2.INTER_AREA)
+
+  lane_line_frame = detect_lane_lines(threshold_frame)
+  cv2.putText(lane_line_frame, 'Detected Lane Lines Frame',(50,50),cv2.FONT_HERSHEY_SIMPLEX,1,(0,255,0),2)
+  FinalScreen[720:1080,640:1280] = cv2.resize(lane_line_frame, (640,360), interpolation=cv2.INTER_AREA)
+
+  front_view_frame = get_front_view(lane_line_frame)
+  front_view_frame_untext = get_front_view(lane_line_frame)
+  cv2.putText(front_view_frame, 'Front view Frame',(50,50),cv2.FONT_HERSHEY_SIMPLEX,1,(0,255,0),2)
+  FinalScreen[720:1080,0:640] = cv2.resize(front_view_frame, (640,360), interpolation=cv2.INTER_AREA)
+
+
+  out_img = cv2.addWeighted(out_img, 1, front_view_frame_untext, 0.6, 0)
+  out_img = plot(out_img)
+  cv2.putText(out_img, 'Final Video',(50,50),cv2.FONT_HERSHEY_SIMPLEX,1,(0,255,0),2)
+  FinalScreen[0:720,0:1280] = cv2.resize(out_img, (1280,720), interpolation=cv2.INTER_AREA)
+  
+  return FinalScreen 
+
+def process_video(input_path, output_path):
+  clip = VideoFileClip(input_path)
+  out_clip = clip.fl_image(pipeline)
+  out_clip.write_videofile(output_path, audio=False)
+
+def process_video_debug(input_path, output_path):
+  clip = VideoFileClip(input_path)
+  out_clip = clip.fl_image(pipeline_debug)
+  out_clip.write_videofile(output_path, audio=False)
+
+def main():
+  
+  mode = sys.argv[1]
+  input_path = sys.argv[2]
+  output_path = sys.argv[3]
+
+  if mode == '0':
+    process_video(input_path, output_path)
+
+  if mode == '1':
+    process_video_debug(input_path, output_path)
+
+
+if __name__ == "__main__":
+  main()
