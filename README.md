@@ -73,12 +73,12 @@ From these starting points, we use a sliding window, placed around the line cent
 
 ## [5] Pipeline
 -  This function runs the steps detailed above in sequence to process a video frame by frame 
--  Each frame in the input vedio will run on sequnce of functions 
-    * undistort function 
-    * Then get_eye_bird_view function
-    * Then thresholding function
-    * Then detect_lane_lines function
-    * Then get_front_view function
+-  Each frame in the input vedio will pass through sequnce of functions 
+    1. undistort function 
+    2. get_eye_bird_view function
+    3. thresholding function
+    4. detect_lane_lines function
+    5. get_front_view function
 - Then we add (blend) two images the result of the sequence of the functions and the original frame, To put the results on the original frame
  
  
