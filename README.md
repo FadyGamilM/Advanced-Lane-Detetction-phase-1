@@ -59,3 +59,41 @@ From these starting points, we use a sliding window, placed around the line cent
 - the `fit_poly(img)` will do that by calling another method defined which is called `find_lane_pixels(img)`, and this function recieves an image and returns all the non-zero pixels from each window by looping through all windows after calculating the center of each window and the x, y coordinates.
 - this is the representation of a single window with all variables we defined in our code:
 ![window](window.png)
+### Curvature of lane:
+> * We can compute the radius of curvature at any point x on the lane line represented by the function `x = f(y) = A(y)^2 + By + C` as follows:
+> ![Curvature_Rule](curvature_rule(1).png)
+> * Since `dx/dy = 2Ay + B` and `d^2x/dy^2 = 2A`
+> * Therefore Radius of curvature = ![Curvature_Rule](curvature_rule(2).png)
+> * Since the y-values for an image increase from top to bottom, we can compute the lane line curvature at maximum y which is the closest point to the vehicle
+### Plotting function:
+> This function plot 2 items 
+> * the curvature of the lane line and when the vechile move in straight line, we plot curvature = 0 
+> * How much vechile is away from the center
+
+
+## [5] Pipeline
+-  This function runs the steps detailed above in sequence to process a video frame by frame 
+-  Each frame in the input vedio will run on sequnce of functions 
+    * undistort function 
+    * Then get_eye_bird_view function
+    * Then thresholding function
+    * Then detect_lane_lines function
+    * Then get_front_view function
+- Then we add (blend) two images the result of the sequence of the functions and the original frame, To put the results on the original frame
+ 
+ 
+ # To Run the pipeline
+ - There are 2 modes (0 or 1) 
+     * 0 : the output will be the final video only
+     * 1 : the output will be the final video and each step the video will pass on it (Debugging mode)
+ - Windows 
+    * In the terminal (cmd):
+        ``` 
+          python main.py 0 INPUT_VIDEO_PATH OUTPUT_VIDEO_PATH
+          python main.py 1 INPUT_VIDEO_PATH OUTPUT_VIDEO_PATH
+        ```
+    * if you want to run in shell script => you must run on Git Bash terminal
+        ``` 
+          sh projectshell.sh 0 INPUT_VIDEO_PATH OUTPUT_VIDEO_PATH
+          sh projectshell.sh 1 INPUT_VIDEO_PATH OUTPUT_VIDEO_PATH
+        ```
